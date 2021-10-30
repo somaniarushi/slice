@@ -3,7 +3,7 @@ import re
 
 #TODO: Convert to arguments accepted from the terminal later.
 lst = [1, 2, 3, 4]
-slice = "[0:2:-1]"
+slice = "[:2:-1]"
 
 ptn = r"^\[(-?\d*):(-?\d*):?(-?\d*)\]$"
 
@@ -14,6 +14,31 @@ class NoneObject:
     def __repr__(self):
         return "none"
 
+class Yielder:
+    """
+    A class that returns the next value on a call to next.
+    """
+    none = NoneObject()
+    def __init__(self, lst, start, end, step):
+        self.lst = lst
+        self.start = int(start) if is_digit(start) else self.none
+        self.end = int(end) if is_digit(end) else self.none
+        self.step = int(step) if is_digit(step) else 1
+
+    def next(self):
+        if self.start is self.none:
+            if self.step < 0:
+                self.start = len(lst)-1
+            else:
+                self.start = 0
+            return None
+        else:
+            if (self.start < 0 or self.start == len(lst) or (self.end is not self.none and self.start == self.end)):
+                return None
+            val = self.lst[self.start]
+            self.start += self.step
+            return val
+
 def is_digit(i):
     """
     Return true if the string i is a digit.
@@ -23,7 +48,7 @@ def is_digit(i):
     else:
         return i.isdigit()
 
-def slicer():
+def slicer(lst, slice):
     """
     Returns the list `lst` slices according to the string `slice`.
     """
@@ -32,30 +57,29 @@ def slicer():
         raise SyntaxError("Slice string input syntax incorrect")
     start, end, step = matched[0]
 
-    none = NoneObject()
-    templst = [none] + lst + [none]
+    end_blank = not is_digit(end)
+    start_blank = not is_digit(start)
 
-    start_blank = is_digit(start)
-    end_blank = is_digit(end)
-
-    start = int(start)+1 if is_digit(start) else 1
-    end = int(end)+1 if is_digit(end) else len(templst)-2
-    step = int(step) if is_digit(step) else 1
-
-
+    y = Yielder(lst, start, end, step)
 
     result = []
+    first_none = True
 
     # End is exclusive.
-    while (start != end):
-        if (start is none):
-            break
-        result.append(templst[start])
-        start += step
-
+    while (True):
+        val = y.next()
+        if not val:
+            if first_none:
+                first_none = False
+                continue
+            else:
+                if (not (start_blank or end_blank)):
+                    return []
+                return result
+        else:
+            result.append(val)
     return result
 
 
 if __name__ == "__main__":
-    res = slicer()
-    print(f"Result is {res}")
+    res = slicer(lst, slice)
